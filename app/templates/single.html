@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+
+{% block title %}单次测试 · 模型批量测试平台{% endblock %}
+
+{% block content %}
+  <div class="page-heading">
+    <span class="eyebrow">Single Test</span>
+    <h2>单次模型调用</h2>
+    <p>适合调试 prompt、请求体参数和模型 API 返回格式。</p>
+  </div>
+
+  <div class="workspace-grid">
+    <div class="stack">
+      {% include "_model_config.html" %}
+      <section class="panel">
+        <h2>Prompt</h2>
+        <textarea id="singlePrompt" rows="8" placeholder="输入要测试的 prompt">请用一句话介绍你自己。</textarea>
+        <button id="runSingle">调用模型</button>
+      </section>
+    </div>
+    <div class="stack">
+      {% include "_request_body.html" %}
+      <section class="panel">
+        <h2>输出结果</h2>
+        <pre id="singleResult" class="result large-result"></pre>
+      </section>
+    </div>
+  </div>
+{% endblock %}

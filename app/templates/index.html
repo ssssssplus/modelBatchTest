@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <section class="hero-panel">
+    <div>
+      <span class="eyebrow">Model Batch Test</span>
+      <h2>本地与内网模型测试工具</h2>
+      <p>用于快速验证模型 API 是否可用，批量运行测试集，并对模型服务做基础压测。</p>
+    </div>
+    <div class="hero-actions">
+      <a class="button-link" href="{{ url_for('main.single_page') }}">开始单次测试</a>
+      <a class="button-link secondary-link" href="{{ url_for('main.batch_page') }}">解析测试集</a>
+    </div>
+  </section>
+
+  <section class="overview-panel">
+    <h3>工具用途</h3>
+    <div class="purpose-list">
+      <div>
+        <strong>调试请求</strong>
+        <p>配置模型 API、编辑请求体 JSON，查看单次调用返回结果。</p>
+      </div>
+      <div>
+        <strong>批量评测</strong>
+        <p>解析 CSV、JSON、JSONL 测试集，批量调用模型并导出 Excel。</p>
+      </div>
+      <div>
+        <strong>服务压测</strong>
+        <p>设置并发数和请求总量，查看 QPS、成功率和延迟指标。</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="card-grid">
+    <a class="feature-card" href="{{ url_for('main.single_page') }}">
+      <span>01</span>
+      <h3>单次测试</h3>
+      <p>输入 prompt，编辑请求体参数，检查模型 API 输出。</p>
+    </a>
+    <a class="feature-card" href="{{ url_for('main.batch_page') }}">
+      <span>02</span>
+      <h3>批量测试</h3>
+      <p>解析测试集，逐条调用模型，查看并导出测试结果。</p>
+    </a>
+    <a class="feature-card" href="{{ url_for('main.pressure_page') }}">
+      <span>03</span>
+      <h3>压测</h3>
+      <p>设置并发和请求总量，查看模型服务性能指标。</p>
+    </a>
+  </section>
+{% endblock %}

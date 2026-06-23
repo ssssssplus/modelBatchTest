@@ -1,0 +1,31 @@
+<section class="panel config-panel">
+  <div class="section-title">
+    <div>
+      <h2>模型配置</h2>
+      <p>选择预设后仍可手动调整 API 地址和模型名称。</p>
+    </div>
+  </div>
+  <label>
+    预设模型
+    <select id="modelPreset">
+      <option value="">自定义模型与 API</option>
+      {% for preset in model_presets %}
+        <option
+          value="{{ loop.index0 }}"
+          data-api-url="{{ preset.api_url }}"
+          data-model="{{ preset.model }}"
+        >
+          {{ preset.label }}
+        </option>
+      {% endfor %}
+    </select>
+  </label>
+  <label>
+    API 地址
+    <input id="apiUrl" value="{{ default_api_url }}">
+  </label>
+  <label>
+    模型名称
+    <input id="modelName" value="{{ default_model }}">
+  </label>
+</section>

@@ -1,0 +1,14 @@
+<section class="panel">
+  <div class="request-editor-header">
+    <div>
+      <h2>请求体 JSON</h2>
+      <p>这里的 JSON 会作为实际模型请求体发送，当前 prompt 会自动写入最后一条 user message。</p>
+    </div>
+    <div class="button-group">
+      <button id="formatRequestBody" type="button" class="secondary">格式化 JSON</button>
+      <button id="resetRequestBody" type="button" class="secondary">重置</button>
+    </div>
+  </div>
+  <textarea id="requestBody" class="code-editor" rows="16" spellcheck="false"></textarea>
+  <div id="requestBodyStatus" class="muted"></div>
+</section>

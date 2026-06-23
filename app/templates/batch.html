@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+
+{% block title %}批量测试 · 模型批量测试平台{% endblock %}
+
+{% block content %}
+  <div class="page-heading">
+    <span class="eyebrow">Dataset Evaluation</span>
+    <h2>测试集上传与批量测试</h2>
+    <p>上传数据集后，平台会把每条记录的 prompt 注入请求体模板并调用模型。</p>
+  </div>
+
+  <div class="workspace-grid">
+    <div class="stack">
+      {% include "_model_config.html" %}
+      <section class="panel">
+        <h2>测试集</h2>
+        <div class="upload-box">
+          <input id="datasetFile" type="file" accept=".csv,.json,.jsonl,.xlsx,.xls">
+          <div class="row">
+            <button id="uploadDataset">解析测试集</button>
+            <button id="runBatch" disabled>批量测试</button>
+            <button id="exportBatch" class="secondary" disabled>导出 Excel</button>
+          </div>
+        </div>
+        <div id="datasetInfo" class="muted"></div>
+      </section>
+    </div>
+
+    <div class="stack">
+      {% include "_request_body.html" %}
+      <div class="panel result-panel">
+        <h2>批量结果</h2>
+        <div class="table-wrap">
+          <table id="batchTable">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Prompt</th>
+                <th>输出</th>
+                <th>耗时</th>
+                <th>状态</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+{% endblock %}

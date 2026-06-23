@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+
+{% block title %}压测 · 模型批量测试平台{% endblock %}
+
+{% block content %}
+  <div class="page-heading">
+    <span class="eyebrow">Load Test</span>
+    <h2>模型 API 压测</h2>
+    <p>用相同请求体模板并发调用模型，快速观察吞吐和延迟表现。</p>
+  </div>
+
+  <div class="workspace-grid">
+    <div class="stack">
+      {% include "_model_config.html" %}
+      <section class="panel">
+        <h2>压测参数</h2>
+        <label>
+          压测 Prompt
+          <textarea id="pressurePrompt" rows="5">请简短回答：什么是大语言模型？</textarea>
+        </label>
+        <div class="grid-two">
+          <label>
+            并发数
+            <input id="concurrency" type="number" min="1" max="100" value="5">
+          </label>
+          <label>
+            总请求数
+            <input id="totalRequests" type="number" min="1" max="5000" value="20">
+          </label>
+        </div>
+        <button id="runPressure">开始压测</button>
+      </section>
+    </div>
+
+    <div class="stack">
+      {% include "_request_body.html" %}
+      <section class="panel">
+        <h2>压测结果</h2>
+        <div id="pressureCards" class="metric-grid"></div>
+        <pre id="pressureResult" class="result large-result"></pre>
+      </section>
+    </div>
+  </div>
+{% endblock %}
