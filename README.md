@@ -3,7 +3,7 @@
 一个基于 Flask 的本地/内网模型批量测试平台基础框架，支持：
 
 - 可视化页面单次调用模型 API
-- 上传 CSV / JSON / JSONL / XLSX / XLS 测试集
+- 上传 CSV / JSON / JSONL / XLSX 测试集，XLS 可作为可选格式支持
 - 批量执行测试集并查看输出
 - 批量测试结果导出为 Excel `.xlsx`
 - 并发压测并统计耗时、成功率、吞吐
@@ -56,7 +56,7 @@ PORT=8001 python run.py
 
 ## 测试集格式
 
-CSV、XLSX、XLS 至少包含 `prompt` 列，第一行作为表头：
+CSV、XLSX 至少包含 `prompt` 列，第一行作为表头：
 
 ```csv
 id,prompt,expected
@@ -69,5 +69,7 @@ JSON / JSONL 每条记录支持：
 ```json
 {"id": "case-1", "prompt": "介绍一下 Flask", "expected": ""}
 ```
+
+老式 `.xls` 文件需要额外安装 `xlrd` 才能解析。如果服务器无法安装 `xlrd`，建议先把 `.xls` 转成 `.xlsx` 后上传。
 
 上传后的文件会保存到 `uploads/` 目录。

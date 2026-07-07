@@ -194,16 +194,25 @@ def export_batch_results():
 def pressure_test():
     payload = request.get_json(silent=True) or {}
     prompt = (payload.get("prompt") or "Hello, please respond briefly.").strip()
+    mode = payload.get("pressure_mode") or "requests"
+    if mode not in {"requests", "duration"}:
+        return jsonify({"error": "pressure_mode must be requests or duration"}), 400
+
     try:
         concurrency = _positive_int_from_request(payload, "concurrency", 5)
-        total_requests = _positive_int_from_request(payload, "total_requests", 20)
+        total_requests = _positive_int_from_request(payload, "total_requests", 20) if mode == "requests" else None
+        duration_seconds = _positive_int_from_request(payload, "duration_seconds", 60) if mode == "duration" else None
     except ValueError as exc:
         return jsonify({"error": str(exc)}), 400
 
-    if concurrency < 1 or total_requests < 1:
-        return jsonify({"error": "concurrency and total_requests must be positive"}), 400
-    if concurrency > 100 or total_requests > 5000:
-        return jsonify({"error": "concurrency <= 100 and total_requests <= 5000"}), 400
+    if concurrency < 1:
+        return jsonify({"error": "concurrency must be positive"}), 400
+    if concurrency > 100:
+        return jsonify({"error": "concurrency <= 100"}), 400
+    if mode == "requests" and (total_requests < 1 or total_requests > 5000):
+        return jsonify({"error": "total_requests must be between 1 and 5000"}), 400
+    if mode == "duration" and (duration_seconds < 1 or duration_seconds > 3600):
+        return jsonify({"error": "duration_seconds must be between 1 and 3600"}), 400
 
     client = _client_from_request(payload)
     try:
@@ -216,6 +225,7 @@ def pressure_test():
         prompt=prompt,
         concurrency=concurrency,
         total_requests=total_requests,
+        duration_seconds=duration_seconds,
         request_body=request_body,
     )
     return jsonify(summary)

@@ -18,17 +18,39 @@
           压测 Prompt
           <textarea id="pressurePrompt" rows="5">请简短回答：什么是大语言模型？</textarea>
         </label>
+        <div class="mode-field">
+          <span class="field-label">压测模式</span>
+          <input id="pressureMode" type="hidden" value="requests">
+          <button id="pressureModeToggle" type="button" class="mode-toggle" data-mode="requests">
+            <span class="mode-toggle-current">按总请求数</span>
+            <span class="mode-toggle-next">点击切换为按持续时间</span>
+          </button>
+        </div>
         <div class="grid-two">
           <label>
             并发数
             <input id="concurrency" type="number" min="1" max="100" value="5">
           </label>
-          <label>
+          <label id="totalRequestsField">
             总请求数
             <input id="totalRequests" type="number" min="1" max="5000" value="20">
           </label>
+          <label id="durationSecondsField" class="hidden">
+            持续时间（秒）
+            <input id="durationSeconds" type="number" min="1" max="3600" value="60">
+          </label>
         </div>
         <button id="runPressure">开始压测</button>
+        <div id="pressureProgress" class="progress-card hidden" aria-live="polite">
+          <div class="progress-header">
+            <strong id="pressureProgressTitle">等待开始</strong>
+            <span id="pressureProgressPercent">0%</span>
+          </div>
+          <div class="progress-track">
+            <div id="pressureProgressFill" class="progress-fill"></div>
+          </div>
+          <div id="pressureProgressDetail" class="muted">提交压测后会显示运行状态。</div>
+        </div>
       </section>
     </div>
 

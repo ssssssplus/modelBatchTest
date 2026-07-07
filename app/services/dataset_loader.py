@@ -3,7 +3,11 @@ import json
 from pathlib import Path
 
 import openpyxl
-import xlrd
+
+try:
+    import xlrd
+except ImportError:
+    xlrd = None
 
 
 class DatasetLoadError(Exception):
@@ -75,6 +79,9 @@ def _load_xlsx(path):
 
 
 def _load_xls(path):
+    if xlrd is None:
+        raise DatasetLoadError("xls datasets require optional dependency xlrd; please convert the file to xlsx")
+
     workbook = xlrd.open_workbook(path)
     sheet = workbook.sheet_by_index(0)
     rows = [sheet.row_values(index) for index in range(sheet.nrows)]

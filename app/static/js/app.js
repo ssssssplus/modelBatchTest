@@ -1,5 +1,6 @@
 let currentDatasetName = null;
 let lastBatchResults = [];
+let pressureProgressTimer = null;
 
 const $ = (selector) => document.querySelector(selector);
 const STORAGE_KEY = "modelBatchTestState";
@@ -34,6 +35,7 @@ bindIfPresent("#singlePrompt", "input", () => {
 bindIfPresent("#pressurePrompt", "input", () => {
   syncRequestBody();
 });
+bindIfPresent("#pressureModeToggle", "click", togglePressureMode);
 bindIfPresent("#requestBody", "input", () => {
   validateRequestBody();
 });
@@ -273,26 +275,45 @@ bindIfPresent("#exportBatch", "click", async () => {
 
 bindIfPresent("#runPressure", "click", async () => {
   const button = $("#runPressure");
+  let progressStarted = false;
   setBusy(button, true, "压测中...");
   $("#pressureCards").innerHTML = "";
   $("#pressureResult").textContent = "";
 
   try {
+    const pressureMode = $("#pressureMode")?.value || "requests";
     const concurrency = Number($("#concurrency").value);
-    const totalRequests = Number($("#totalRequests").value);
-    if (!Number.isInteger(concurrency) || !Number.isInteger(totalRequests) || concurrency < 1 || totalRequests < 1) {
-      throw new Error("并发数和总请求数必须是大于 0 的整数");
+    const totalRequests = Number($("#totalRequests")?.value);
+    const durationSeconds = Number($("#durationSeconds")?.value);
+    if (!Number.isInteger(concurrency) || concurrency < 1) {
+      throw new Error("并发数必须是大于 0 的整数");
+    }
+    if (pressureMode === "requests" && (!Number.isInteger(totalRequests) || totalRequests < 1)) {
+      throw new Error("总请求数必须是大于 0 的整数");
+    }
+    if (pressureMode === "duration" && (!Number.isInteger(durationSeconds) || durationSeconds < 1)) {
+      throw new Error("持续时间必须是大于 0 的整数秒");
     }
 
-    const data = await postJson("/api/pressure-test", {
+    const requestPayload = {
       ...modelConfig(),
       prompt: $("#pressurePrompt").value,
+      pressure_mode: pressureMode,
       concurrency,
       total_requests: totalRequests,
-    });
+      duration_seconds: durationSeconds,
+    };
+
+    startPressureProgress({ mode: pressureMode, totalRequests, durationSeconds, concurrency });
+    progressStarted = true;
+    const data = await postJson("/api/pressure-test", requestPayload);
+    completePressureProgress(data);
     renderPressureCards(data);
     showJson($("#pressureResult"), data);
   } catch (error) {
+    if (progressStarted) {
+      failPressureProgress(error.message);
+    }
     showJson($("#pressureResult"), { error: error.message });
   } finally {
     setBusy(button, false);
@@ -353,6 +374,76 @@ function renderPressureCards(data) {
     .join("");
 }
 
+function startPressureProgress({ mode, totalRequests, durationSeconds, concurrency }) {
+  stopPressureProgressTimer();
+  const progress = $("#pressureProgress");
+  if (!progress) {
+    return;
+  }
+
+  const fill = $("#pressureProgressFill");
+  const title = $("#pressureProgressTitle");
+  const percent = $("#pressureProgressPercent");
+  const detail = $("#pressureProgressDetail");
+  const startedAt = Date.now();
+  let displayedPercent = 5;
+  const targetText = mode === "duration" ? `持续 ${durationSeconds}s` : `总请求 ${totalRequests}`;
+
+  progress.classList.remove("hidden", "progress-error", "progress-done");
+  fill.style.width = `${displayedPercent}%`;
+  title.textContent = "压测请求已提交";
+  percent.textContent = `${displayedPercent}%`;
+  detail.textContent = `并发 ${concurrency}，${targetText}，正在等待模型服务返回。`;
+
+  pressureProgressTimer = window.setInterval(() => {
+    const elapsedSeconds = Math.max(1, Math.round((Date.now() - startedAt) / 1000));
+    if (mode === "duration") {
+      displayedPercent = Math.min(95, Math.max(5, (elapsedSeconds / durationSeconds) * 95));
+    } else {
+      displayedPercent = Math.min(92, displayedPercent + Math.max(1, (92 - displayedPercent) * 0.08));
+    }
+    const rounded = Math.round(displayedPercent);
+    fill.style.width = `${rounded}%`;
+    title.textContent = `压测运行中，已用时 ${elapsedSeconds}s`;
+    percent.textContent = `${rounded}%`;
+    detail.textContent = `并发 ${concurrency}，${targetText}。结果会在后端完成后展示。`;
+  }, 700);
+}
+
+function completePressureProgress(data) {
+  stopPressureProgressTimer();
+  const progress = $("#pressureProgress");
+  if (!progress) {
+    return;
+  }
+
+  progress.classList.add("progress-done");
+  $("#pressureProgressFill").style.width = "100%";
+  $("#pressureProgressTitle").textContent = "压测完成";
+  $("#pressureProgressPercent").textContent = "100%";
+  $("#pressureProgressDetail").textContent = `成功 ${data.ok}，失败 ${data.failed}，耗时 ${data.duration_seconds}s。`;
+}
+
+function failPressureProgress(message) {
+  stopPressureProgressTimer();
+  const progress = $("#pressureProgress");
+  if (!progress) {
+    return;
+  }
+
+  progress.classList.add("progress-error");
+  $("#pressureProgressTitle").textContent = "压测失败";
+  $("#pressureProgressPercent").textContent = "--";
+  $("#pressureProgressDetail").textContent = message;
+}
+
+function stopPressureProgressTimer() {
+  if (pressureProgressTimer) {
+    window.clearInterval(pressureProgressTimer);
+    pressureProgressTimer = null;
+  }
+}
+
 function escapeHtml(value) {
   return String(value ?? "")
     .replaceAll("&", "&amp;")
@@ -378,6 +469,29 @@ function currentPromptValue() {
     return $("#pressurePrompt").value;
   }
   return "{{prompt}}";
+}
+
+function togglePressureMode() {
+  const modeInput = $("#pressureMode");
+  if (!modeInput) {
+    return;
+  }
+  modeInput.value = modeInput.value === "duration" ? "requests" : "duration";
+  syncPressureModeFields();
+}
+
+function syncPressureModeFields() {
+  const mode = $("#pressureMode")?.value || "requests";
+  const isDuration = mode === "duration";
+  $("#totalRequestsField")?.classList.toggle("hidden", isDuration);
+  $("#durationSecondsField")?.classList.toggle("hidden", !isDuration);
+
+  const toggle = $("#pressureModeToggle");
+  if (toggle) {
+    toggle.dataset.mode = mode;
+    toggle.querySelector(".mode-toggle-current").textContent = isDuration ? "按持续时间" : "按总请求数";
+    toggle.querySelector(".mode-toggle-next").textContent = isDuration ? "点击切换为按总请求数" : "点击切换为按持续时间";
+  }
 }
 
 function bindIfPresent(selector, eventName, handler) {
@@ -417,8 +531,10 @@ function saveState(extra = {}) {
   writeCurrentValue(state, "requestBody", "#requestBody");
   writeCurrentValue(state, "singlePrompt", "#singlePrompt");
   writeCurrentValue(state, "pressurePrompt", "#pressurePrompt");
+  writeCurrentValue(state, "pressureMode", "#pressureMode");
   writeCurrentValue(state, "concurrency", "#concurrency");
   writeCurrentValue(state, "totalRequests", "#totalRequests");
+  writeCurrentValue(state, "durationSeconds", "#durationSeconds");
   writeCurrentText(state, "datasetInfo", "#datasetInfo");
   if (currentDatasetName) {
     state.currentDatasetName = currentDatasetName;
@@ -455,8 +571,10 @@ function restoreState() {
   setValueIfPresent("#modelPreset", state.modelPreset);
   setValueIfPresent("#singlePrompt", state.singlePrompt);
   setValueIfPresent("#pressurePrompt", state.pressurePrompt);
+  setValueIfPresent("#pressureMode", state.pressureMode);
   setValueIfPresent("#concurrency", state.concurrency);
   setValueIfPresent("#totalRequests", state.totalRequests);
+  setValueIfPresent("#durationSeconds", state.durationSeconds);
   setValueIfPresent("#requestBody", state.requestBody);
 
   currentDatasetName = state.currentDatasetName || null;
@@ -478,6 +596,7 @@ function setValueIfPresent(selector, value) {
 }
 
 restoreState();
+syncPressureModeFields();
 
 if ($("#requestBody") && !$("#requestBody").value.trim()) {
   renderRequestBody(buildDefaultRequestBody());

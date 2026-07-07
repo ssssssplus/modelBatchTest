@@ -18,6 +18,11 @@
   box-sizing: border-box;
 }
 
+
+.hidden {
+  display: none !important;
+}
+
 body {
   margin: 0;
   background:
@@ -346,6 +351,71 @@ textarea {
   gap: 16px;
 }
 
+.mode-field {
+  margin-bottom: 14px;
+}
+
+.field-label {
+  display: block;
+  margin-bottom: 8px;
+  color: #344054;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.mode-toggle {
+  position: relative;
+  display: flex;
+  width: 100%;
+  min-height: 52px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+  padding: 10px 14px 10px 48px;
+  overflow: hidden;
+  border: 1px solid #cddcff;
+  color: var(--text);
+  background: #ffffff;
+  box-shadow: 0 8px 22px rgba(37, 99, 235, 0.08);
+  transition: border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease, background 180ms ease;
+}
+
+.mode-toggle::before {
+  content: "";
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  background: var(--primary);
+  transform: translateY(-50%);
+  transition: transform 220ms ease, background 180ms ease;
+}
+
+.mode-toggle[data-mode="duration"]::before {
+  background: #14b8a6;
+  transform: translateY(-50%) scale(0.82);
+}
+
+.mode-toggle:hover {
+  border-color: #8fb0ff;
+  background: #f8fbff;
+  box-shadow: 0 12px 28px rgba(37, 99, 235, 0.12);
+  transform: translateY(-1px);
+}
+
+.mode-toggle-current {
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.mode-toggle-next {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+
 .upload-box {
   display: grid;
   gap: 14px;
@@ -461,6 +531,55 @@ td {
   display: block;
   margin-top: 8px;
   font-size: 24px;
+}
+
+.progress-card {
+  margin-top: 16px;
+  padding: 14px;
+  border: 1px solid var(--soft-border);
+  border-radius: 10px;
+  background: #f8fbff;
+}
+
+.progress-card.hidden {
+  display: none;
+}
+
+.progress-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 14px;
+}
+
+.progress-header span {
+  color: var(--primary);
+  font-weight: 800;
+}
+
+.progress-track {
+  height: 10px;
+  margin-top: 12px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #dfe8f6;
+}
+
+.progress-fill {
+  width: 0;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #2563eb, #14b8a6);
+  transition: width 500ms ease;
+}
+
+.progress-done .progress-fill {
+  background: var(--success);
+}
+
+.progress-error .progress-fill {
+  background: var(--danger);
 }
 
 .ok {
