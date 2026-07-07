@@ -8,6 +8,7 @@ BASE_DIR = Path(__file__).resolve().parent
 class Config:
     SECRET_KEY = os.getenv("SECRET_KEY", "dev-secret-key")
     UPLOAD_FOLDER = os.getenv("UPLOAD_FOLDER", str(BASE_DIR / "uploads"))
+    DATABASE_PATH = os.getenv("DATABASE_PATH", str(BASE_DIR / "instance" / "app.db"))
     MAX_CONTENT_LENGTH = int(os.getenv("MAX_CONTENT_LENGTH", 16 * 1024 * 1024))
 
     DEFAULT_MODEL_API_URL = os.getenv(

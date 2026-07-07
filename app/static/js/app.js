@@ -13,6 +13,7 @@ function modelConfig() {
     api_url: $("#apiUrl").value.trim(),
     model: $("#modelName").value.trim(),
     request_body: requestBody,
+    request_headers: collectRequestHeaders(),
   };
 }
 
@@ -43,6 +44,10 @@ bindIfPresent("#resetRequestBody", "click", () => {
   renderRequestBody(buildDefaultRequestBody());
 });
 bindIfPresent("#formatRequestBody", "click", formatRequestBody);
+bindIfPresent("#importCurlToggle", "click", toggleCurlImportPanel);
+bindIfPresent("#importCurlCancel", "click", toggleCurlImportPanel);
+bindIfPresent("#importCurlConfirm", "click", importRequestBodyFromCurl);
+bindIfPresent("#addHeaderRow", "click", () => addHeaderRow());
 
 function showJson(element, data) {
   element.textContent = JSON.stringify(data, null, 2);
@@ -86,6 +91,200 @@ function formatRequestBody() {
   } catch (error) {
     setRequestBodyStatus(`无法格式化：${error.message}`, true);
   }
+}
+
+function toggleCurlImportPanel() {
+  const panel = $("#curlImportPanel");
+  if (!panel) {
+    return;
+  }
+  panel.classList.toggle("hidden");
+  if (!panel.classList.contains("hidden")) {
+    $("#curlCommand")?.focus();
+  }
+}
+
+function importRequestBodyFromCurl() {
+  try {
+    const curlCommand = $("#curlCommand").value.trim();
+    if (!curlCommand) {
+      throw new Error("请先粘贴 curl 命令");
+    }
+    const parsed = parseCurlCommand(curlCommand);
+    renderRequestBody(parsed.body);
+    renderHeaderRows(parsed.headers);
+    if (parsed.url && $("#apiUrl")) {
+      $("#apiUrl").value = parsed.url;
+    }
+    $("#curlImportPanel").classList.add("hidden");
+    setRequestBodyStatus(parsed.url ? "已从 curl 导入请求体和 API 地址。" : "已从 curl 导入请求体。", false);
+  } catch (error) {
+    setRequestBodyStatus(`curl 导入失败：${error.message}`, true);
+  }
+}
+
+function parseCurlCommand(command) {
+  const tokens = tokenizeShellCommand(command.replace(/\\\r?\n/g, " "));
+  if (!tokens.length || tokens[0] !== "curl") {
+    throw new Error("命令需要以 curl 开头");
+  }
+
+  let url = null;
+  let data = null;
+  const headers = {};
+  const dataFlags = new Set(["-d", "--data", "--data-raw", "--data-binary", "--data-ascii"]);
+  const headerFlags = new Set(["-H", "--header"]);
+  for (let index = 1; index < tokens.length; index += 1) {
+    const token = tokens[index];
+    if (dataFlags.has(token)) {
+      data = tokens[index + 1];
+      index += 1;
+      continue;
+    }
+    if (headerFlags.has(token)) {
+      addHeaderFromCurl(headers, tokens[index + 1]);
+      index += 1;
+      continue;
+    }
+    const dataPrefix = [...dataFlags].find((flag) => token.startsWith(`${flag}=`));
+    if (dataPrefix) {
+      data = token.slice(dataPrefix.length + 1);
+      continue;
+    }
+    const headerPrefix = [...headerFlags].find((flag) => token.startsWith(`${flag}=`));
+    if (headerPrefix) {
+      addHeaderFromCurl(headers, token.slice(headerPrefix.length + 1));
+      continue;
+    }
+    if (!token.startsWith("-") && /^https?:\/\//.test(token)) {
+      url = token;
+    }
+  }
+
+  if (!data) {
+    throw new Error("没有找到 -d 或 --data-raw 请求体");
+  }
+
+  let body;
+  try {
+    body = JSON.parse(data);
+  } catch (error) {
+    throw new Error(`请求体不是合法 JSON：${error.message}`);
+  }
+  if (!body || Array.isArray(body) || typeof body !== "object") {
+    throw new Error("curl 请求体必须是 JSON object");
+  }
+  return { url, body, headers };
+}
+
+function addHeaderFromCurl(headers, rawHeader) {
+  if (!rawHeader) {
+    return;
+  }
+  const separatorIndex = rawHeader.indexOf(":");
+  if (separatorIndex <= 0) {
+    return;
+  }
+  const key = rawHeader.slice(0, separatorIndex).trim();
+  const value = rawHeader.slice(separatorIndex + 1).trim();
+  if (key) {
+    headers[key] = value;
+  }
+}
+
+function addHeaderRow(key = "", value = "") {
+  const tbody = $("#requestHeadersBody");
+  if (!tbody) {
+    return;
+  }
+  const row = document.createElement("tr");
+  row.innerHTML = `
+    <td><input class="header-key" value="${escapeHtml(key)}" placeholder="Content-Type"></td>
+    <td><input class="header-value" value="${escapeHtml(value)}" placeholder="application/json"></td>
+    <td><button type="button" class="secondary remove-header-row">删除</button></td>
+  `;
+  row.querySelector(".remove-header-row").addEventListener("click", () => row.remove());
+  tbody.appendChild(row);
+}
+
+function renderHeaderRows(headers = {}) {
+  const tbody = $("#requestHeadersBody");
+  if (!tbody) {
+    return;
+  }
+  tbody.innerHTML = "";
+  const entries = Object.entries(headers);
+  if (!entries.length) {
+    addHeaderRow("Content-Type", "application/json");
+    return;
+  }
+  entries.forEach(([key, value]) => addHeaderRow(key, value));
+}
+
+function collectRequestHeaders() {
+  const tbody = $("#requestHeadersBody");
+  if (!tbody) {
+    return {};
+  }
+  const headers = {};
+  tbody.querySelectorAll("tr").forEach((row) => {
+    const key = row.querySelector(".header-key")?.value.trim();
+    const value = row.querySelector(".header-value")?.value ?? "";
+    if (key) {
+      headers[key] = value;
+    }
+  });
+  return headers;
+}
+
+function tokenizeShellCommand(command) {
+  const tokens = [];
+  let current = "";
+  let quote = null;
+  let escaped = false;
+
+  for (const char of command) {
+    if (escaped) {
+      current += char;
+      escaped = false;
+      continue;
+    }
+    if (char === "\\") {
+      escaped = true;
+      continue;
+    }
+    if (quote) {
+      if (char === quote) {
+        quote = null;
+      } else {
+        current += char;
+      }
+      continue;
+    }
+    if (char === "'" || char === '"') {
+      quote = char;
+      continue;
+    }
+    if (/\s/.test(char)) {
+      if (current) {
+        tokens.push(current);
+        current = "";
+      }
+      continue;
+    }
+    current += char;
+  }
+
+  if (escaped) {
+    current += "\\";
+  }
+  if (quote) {
+    throw new Error("curl 命令引号未闭合");
+  }
+  if (current) {
+    tokens.push(current);
+  }
+  return tokens;
 }
 
 function parseRequestBody() {
@@ -529,6 +728,9 @@ function saveState(extra = {}) {
   writeCurrentValue(state, "modelName", "#modelName");
   writeCurrentValue(state, "modelPreset", "#modelPreset");
   writeCurrentValue(state, "requestBody", "#requestBody");
+  if ($("#requestHeadersBody")) {
+    state.requestHeaders = collectRequestHeaders();
+  }
   writeCurrentValue(state, "singlePrompt", "#singlePrompt");
   writeCurrentValue(state, "pressurePrompt", "#pressurePrompt");
   writeCurrentValue(state, "pressureMode", "#pressureMode");
@@ -576,6 +778,9 @@ function restoreState() {
   setValueIfPresent("#totalRequests", state.totalRequests);
   setValueIfPresent("#durationSeconds", state.durationSeconds);
   setValueIfPresent("#requestBody", state.requestBody);
+  if (state.requestHeaders) {
+    renderHeaderRows(state.requestHeaders);
+  }
 
   currentDatasetName = state.currentDatasetName || null;
   if ($("#runBatch") && currentDatasetName) {
@@ -597,6 +802,9 @@ function setValueIfPresent(selector, value) {
 
 restoreState();
 syncPressureModeFields();
+if ($("#requestHeadersBody") && !$("#requestHeadersBody").children.length) {
+  renderHeaderRows({ "Content-Type": "application/json" });
+}
 
 if ($("#requestBody") && !$("#requestBody").value.trim()) {
   renderRequestBody(buildDefaultRequestBody());

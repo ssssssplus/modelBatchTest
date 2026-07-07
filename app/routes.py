@@ -1,15 +1,55 @@
 from pathlib import Path
 
-from flask import Blueprint, current_app, jsonify, render_template, request, send_file
+from flask import Blueprint, current_app, jsonify, redirect, render_template, request, send_file, session, url_for
 
 from app.services.dataset_loader import DatasetLoadError, load_dataset
 from app.services.excel_exporter import batch_results_filename, build_batch_results_xlsx
 from app.services.model_client import ModelClient, ModelClientError
 from app.services.pressure import run_pressure_test
 from app.services.storage import save_uploaded_file
+from app.services.auth import verify_user
 
 
 bp = Blueprint("main", __name__)
+
+PUBLIC_ENDPOINTS = {"main.login", "static"}
+
+
+@bp.before_app_request
+def require_login():
+    endpoint = request.endpoint or ""
+    if endpoint in PUBLIC_ENDPOINTS or endpoint.startswith("static"):
+        return None
+    if session.get("user"):
+        return None
+    if request.path.startswith("/api/"):
+        return jsonify({"error": "login required"}), 401
+    return redirect(url_for("main.login", next=request.full_path if request.query_string else request.path))
+
+
+@bp.route("/login", methods=["GET", "POST"])
+def login():
+    if session.get("user"):
+        return redirect(url_for("main.index"))
+
+    error = None
+    if request.method == "POST":
+        username = (request.form.get("username") or "").strip()
+        password = request.form.get("password") or ""
+        user = verify_user(username, password)
+        if user:
+            session.clear()
+            session["user"] = user
+            return redirect(request.args.get("next") or url_for("main.index"))
+        error = "用户名或密码错误"
+
+    return render_template("login.html", error=error)
+
+
+@bp.get("/logout")
+def logout():
+    session.clear()
+    return redirect(url_for("main.login"))
 
 
 def _page_context(active_page):
@@ -25,7 +65,22 @@ def _client_from_request(payload):
     api_url = payload.get("api_url") or current_app.config["DEFAULT_MODEL_API_URL"]
     model = payload.get("model") or current_app.config["DEFAULT_MODEL_NAME"]
     timeout = current_app.config["MODEL_API_TIMEOUT"]
-    return ModelClient(api_url=api_url, model=model, timeout=timeout)
+    headers = _request_headers_from_request(payload)
+    return ModelClient(api_url=api_url, model=model, timeout=timeout, headers=headers)
+
+
+def _request_headers_from_request(payload):
+    headers = payload.get("request_headers") or {}
+    if not isinstance(headers, dict):
+        raise ValueError("request_headers must be a json object")
+
+    normalized = {}
+    for key, value in headers.items():
+        key = str(key).strip()
+        if not key:
+            continue
+        normalized[key] = "" if value is None else str(value)
+    return normalized
 
 
 def _request_body_from_request(payload):
@@ -86,8 +141,8 @@ def test_model():
     if not prompt:
         return jsonify({"error": "prompt is required"}), 400
 
-    client = _client_from_request(payload)
     try:
+        client = _client_from_request(payload)
         request_body = _request_body_from_request(payload)
         result = client.generate(prompt, request_body=request_body)
     except ValueError as exc:
@@ -132,8 +187,8 @@ def batch_test():
     except DatasetLoadError as exc:
         return jsonify({"error": str(exc)}), 400
 
-    client = _client_from_request(payload)
     try:
+        client = _client_from_request(payload)
         request_body = _request_body_from_request(payload)
     except ValueError as exc:
         return jsonify({"error": str(exc)}), 400
@@ -214,8 +269,8 @@ def pressure_test():
     if mode == "duration" and (duration_seconds < 1 or duration_seconds > 3600):
         return jsonify({"error": "duration_seconds must be between 1 and 3600"}), 400
 
-    client = _client_from_request(payload)
     try:
+        client = _client_from_request(payload)
         request_body = _request_body_from_request(payload)
     except ValueError as exc:
         return jsonify({"error": str(exc)}), 400

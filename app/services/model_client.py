@@ -9,17 +9,18 @@ class ModelClientError(Exception):
 
 
 class ModelClient:
-    def __init__(self, api_url, model, timeout=60):
+    def __init__(self, api_url, model, timeout=60, headers=None):
         self.api_url = api_url
         self.model = model
         self.timeout = timeout
+        self.headers = headers or None
 
     def generate(self, prompt, request_body=None):
         payload = self._build_payload(prompt, request_body)
 
         started = time.perf_counter()
         try:
-            response = requests.post(self.api_url, json=payload, timeout=self.timeout)
+            response = requests.post(self.api_url, json=payload, headers=self.headers, timeout=self.timeout)
             response.raise_for_status()
             data = response.json()
         except requests.RequestException as exc:
@@ -33,6 +34,7 @@ class ModelClient:
             "raw": data,
             "latency_ms": latency_ms,
             "request_body": payload,
+            "request_headers": self.headers or {},
         }
 
     def _build_payload(self, prompt, request_body):

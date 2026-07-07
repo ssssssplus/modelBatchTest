@@ -15,7 +15,10 @@
           <p>本地与内网模型 API 的调试、批量评测和压测</p>
         </div>
       </div>
-      <span class="badge">Flask · Python 3.10</span>
+      <div class="user-menu">
+        <span class="badge">{{ session.user.username if session.user else '未登录' }}</span>
+        <a class="logout-link" href="{{ url_for('main.logout') }}">退出</a>
+      </div>
     </header>
 
     <nav class="nav-tabs" aria-label="主导航">

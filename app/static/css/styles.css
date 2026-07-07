@@ -425,12 +425,16 @@ textarea {
   background: #f8fbff;
 }
 
+.request-config-panel {
+  display: grid;
+  gap: 14px;
+}
+
 .request-editor-header {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 12px;
+  gap: 16px;
 }
 
 .button-group {
@@ -439,6 +443,63 @@ textarea {
   flex-wrap: wrap;
   gap: 8px;
   justify-content: flex-end;
+}
+
+.curl-import-panel,
+.request-config-section {
+  padding: 14px;
+  border: 1px solid var(--soft-border);
+  border-radius: 10px;
+  background: #f8fbff;
+}
+
+.curl-import-panel {
+  display: grid;
+  gap: 12px;
+}
+
+.curl-import-panel textarea {
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  font-size: 13px;
+}
+
+.request-config-section-title {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.request-config-section-title p {
+  margin-top: 4px;
+  font-size: 13px;
+}
+
+.headers-table-wrap {
+  overflow: auto;
+  border: 1px solid var(--soft-border);
+  border-radius: 10px;
+  background: #ffffff;
+}
+
+.headers-table {
+  min-width: 0;
+}
+
+.headers-table th,
+.headers-table td {
+  padding: 8px;
+}
+
+.headers-table th:last-child,
+.headers-table td:last-child {
+  width: 88px;
+  text-align: center;
+}
+
+.headers-table input {
+  margin-top: 0;
 }
 
 .code-editor {
@@ -635,4 +696,63 @@ td {
   .metric-grid {
     grid-template-columns: 1fr;
   }
+}
+
+.user-menu {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.logout-link {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.logout-link:hover {
+  color: var(--primary);
+}
+
+.login-body {
+  display: grid;
+  min-height: 100vh;
+  place-items: center;
+  padding: 24px;
+}
+
+.login-card {
+  width: min(100%, 440px);
+  padding: 28px;
+  border: 1px solid var(--soft-border);
+  border-radius: 14px;
+  background: #ffffff;
+  box-shadow: var(--shadow);
+}
+
+.login-brand {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.login-brand h1 {
+  font-size: 22px;
+}
+
+.login-form {
+  display: grid;
+  gap: 12px;
+}
+
+.login-error {
+  margin-bottom: 16px;
+  padding: 10px 12px;
+  border: 1px solid #f5c2bd;
+  border-radius: 8px;
+  color: var(--danger);
+  background: #fff1f0;
+  font-weight: 700;
 }
